@@ -36,6 +36,12 @@ def command_line():
 
     args = parser.parse_args()  #Парсинг аргументов
 
+    args_dict = vars(args)
+
+    print(50*"=")
+    for key, value in args_dict.items():
+        print(f"{key}: {value}")
+
     if not args.package_name:
         raise  ValueError("package_name cannot be empty")
 
