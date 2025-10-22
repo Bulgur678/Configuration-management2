@@ -42,9 +42,5 @@ def command_line():
     for key, value in args_dict.items():
         print(f"{key}: {value}")
 
-    if not args.package_name:
-        raise  ValueError("package_name cannot be empty")
-
-
 
 command_line()
