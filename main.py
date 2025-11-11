@@ -1,4 +1,5 @@
 import argparse
+from CLI_ARK import APK_Dependency
 
 def command_line():
     args = {}
@@ -9,13 +10,13 @@ def command_line():
     #Имя пакета
     parser.add_argument( "-p", '--package-name',
                         type=str,
-                        help="Введите ваше имя",
+                        help="Введите имя пакета",
                         required=True)
     # URL репозитория
     parser.add_argument('-r', '--repo-url',
                         type=str,
-                        default='',
-                        help='URL-адрес репозитория или путь к файлу тестового репозитория')
+                        help='URL-адрес репозитория или путь к файлу тестового репозитория',
+                        required=True)
 
     # Режим работы с репозиторием
     parser.add_argument( '-m', '--repo-mode',
@@ -38,9 +39,20 @@ def command_line():
 
     args_dict = vars(args)
 
-    print(50*"=")
-    for key, value in args_dict.items():
-        print(f"{key}: {value}")
+    return args_dict
+
+    #package_name: First_proggram
+    #repo_url: \some\url
+    #repo_mode: test
+    #output_image: None
+    #ascii_tree: False
+
+args_dict = command_line()
+
+#объект класса
+apk_dep = APK_Dependency()
+
+# Вызов метода
+apk_dep.run(args_dict["package_name"], args_dict["repo_url"])
 
 
-command_line()
