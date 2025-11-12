@@ -8,9 +8,9 @@ python main.py -p abseil-cpp-cord-internal -r https://dl-cdn.alpinelinux.org/alp
 
 
 echo Второй тест
-echo python main.py -p curl -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
+echo python main.py -p nettle -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 
-python main.py -p curl -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
+python main.py -p nettle -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 
 
 echo Третий тест
@@ -19,5 +19,4 @@ echo python main.py -p abseil-cpp-leak-check -r https://dl-cdn.alpinelinux.org/a
 python main.py -p abseil-cpp-leak-check -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/x86_64
 
 echo:
-
 pause
