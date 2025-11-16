@@ -11,7 +11,6 @@ echo python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpi
 python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 echo:
 
-
 echo Третий тест
 echo python python main.py -p nodejs-doc -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 python main.py -p nodejs-doc -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
