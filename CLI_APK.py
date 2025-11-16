@@ -39,14 +39,15 @@ class APK_Dependency:
         raise RuntimeError(f"Не удалось загрузить APKINDEX.tar.gz из репозитория. Последняя ошибка: {last_err}")
 
     def find_package_dependence(self, apkindex_text: str, package_name: str):
-        if package_name.startswith("so:"):
-            temp_P = ""
+        if package_name.strip().startswith("so:"):
+            temp_D = ""
+
             for line in apkindex_text.splitlines():
-                if line.startswith('P:'):
-                    temp_P = line[2:].strip()
+                if line.startswith('D:'):
+                    temp_D = line[2:].strip()
 
                 if line.startswith('p:') and package_name in line:
-                    return temp_P
+                    return  temp_D
         else:
             in_block = False
             for line in apkindex_text.splitlines():
@@ -56,7 +57,7 @@ class APK_Dependency:
                     else:
                         in_block = False
                 else:
-                    if in_block:
+                    if in_block and line.startswith("D:"):
                         return line[2:].strip()
 
     def find_package_block(self, apkindex_text: str, package_name: str):
@@ -93,19 +94,11 @@ class APK_Dependency:
         if not dep_line:
             return []
 
-        dep_row = dep_line.split()
+        dep_row = dep_line.split(" ")
+
         for i in range(len(dep_row)):
             if "=" in dep_row[i]:
                 dep_row[i] = dep_row[i].split("=",1)[0]
-
-            # if "so:libz." in dep_row[i]:
-            #     dep_row[i] = "libzmq"
-            #
-            # elif dep_row[i].startswith("so:libc.musl-"):
-            #     dep_row[i] = "musl"
-
-            elif dep_row[i].startswith("so:"):
-                dep_row[i] = dep_row[i][3:].split(".so",1)[0]
 
         return dep_row
 
@@ -114,8 +107,9 @@ class APK_Dependency:
         #block_lines = self.find_package_block(self.apk_text, package_name)
         #dep_line = self.extract_dep_line(block_lines)
 
-        dep_line = self.find_package_dependence(self.apk_text, self.package_name)
-        print("Без обработки = ", dep_line,"\n")
+        dep_line = self.find_package_dependence(self.apk_text, package_name)
+        #print("Без обработки = ", dep_line,"\n")
+
         dependencies = self.clean_dependencies(dep_line)
 
         return dependencies
@@ -133,26 +127,42 @@ class APK_Dependency:
         self.BFS_r(queue)
 
         # Добавляем транзитивные зависимости потом добавлю
+        # for name, set_dep in self.graph.items():
+        #     print(f"Имя = {name} set_dep = {set_dep}")
+        #     temp_list = list(set_dep)
+        #     for add in temp_list:
+        #         print("ADD = ", add)
+        #         self.add_transitive_edges(add, name)
+
+        self.no_transitive_graph = self.graph
+        #ЖПТ
         for name, set_dep in self.graph.items():
-            temp_list = list(set_dep)
-            for add in temp_list:
-                self.add_transitive_edges(add, name)
+            self.add_transitive_edges_iterative(name)
 
         return self.graph
+
 
     def BFS_r(self, queue: deque ):
         if not queue:
             return
         # проход по всему уровню
         for _ in range(len(queue)):  # фиксируем длину на начало
+            #print(queue)
             current_package = queue.popleft()
             dependencies = self.run(current_package)
+
             addable = []
             # добавляем сыновей
+
+            #print("Текущий пакет = ", current_package)
+            #print("Зависимости =",dependencies)
             for dep in dependencies:
+                #print("деп",dep)
                 if dep not in self.visited_bfs:
                     queue.append(dep)
                     addable.append(dep)
+            #print("\n")
+
 
             self.graph[current_package] = set(addable)
             self.visited_bfs.add(current_package)
@@ -163,10 +173,44 @@ class APK_Dependency:
     def add_transitive_edges(self, current_package: str, add_to: str):
         dependencies = self.run(current_package)
 
+
         for dep in dependencies:
-            self.add_transitive_edges(dep,add_to)
+            if dep != add_to:
+                self.add_transitive_edges(dep,add_to)
 
         self.graph[add_to].add(current_package)
+
+    def add_transitive_edges_iterative(self, start_package: str):
+        """Итеративное добавление транзитивных зависимостей через BFS"""
+        visited = set()
+        queue = deque(self.graph[start_package])  # начинаем с прямых зависимостей
+
+        while queue:
+            current = queue.popleft()
+            if current in visited:
+                continue
+            visited.add(current)
+
+            try:
+                # Добавляем зависимости текущего пакета к исходному
+                dependencies = self.run(current)
+                for dep in dependencies:
+                    if dep != start_package:  # избегаем петель
+                        self.graph[start_package].add(dep)
+                        if dep not in visited:
+                            queue.append(dep)
+            except Exception as e:
+                print(f"Ошибка при обработке {current}: {e}")
+
+
+    def print_graph(self):
+        """Визуализация графа"""
+        print("\n--- Граф зависимостей (с транзитивностью) ---")
+        for package, deps in self.graph.items():
+            if deps:
+                print(f"{package} -> {', '.join(sorted(deps))} |END|\n")
+            else:
+                print(f"{package} -> (нет зависимостей)")
 
 
 

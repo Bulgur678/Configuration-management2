@@ -53,7 +53,11 @@ args_dict = command_line()
 apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"])
 
 # Вызов метода
-print(apk_dep.run(args_dict["package_name"]),'\n')
+#print(apk_dep.run(args_dict["package_name"]),'\n')
 #
-#print(apk_dep.build_graph())
+apk_dep.build_graph()
+
+apk_dep.print_graph()
+
+#print("Вывод зиш\n",apk_dep.run("zsh"))
 
