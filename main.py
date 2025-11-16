@@ -1,5 +1,5 @@
 import argparse
-from CLI_ARK import APK_Dependency
+from CLI_APK import APK_Dependency
 
 def command_line():
     args = {}
@@ -50,9 +50,10 @@ def command_line():
 args_dict = command_line()
 
 #объект класса
-apk_dep = APK_Dependency()
+apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"])
 
 # Вызов метода
-apk_dep.run(args_dict["package_name"], args_dict["repo_url"])
-
+print(apk_dep.run(args_dict["package_name"]),'\n')
+#
+#print(apk_dep.build_graph())
 
