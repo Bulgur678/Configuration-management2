@@ -21,14 +21,18 @@ def command_line():
     # Режим работы с репозиторием
     parser.add_argument( '-m', '--repo-mode',
                         type=str,
-                        choices=['local', 'remote', 'test'],
-                        default='local',
-                        help='Режим работы с тестовым репозиторием (local, remote, test)')
+                        choices=['remote', 'test'],
+                        default='remote',
+                        help='Режим работы с тестовым репозиторием (remote, test)')
 
     # Имя файла для изображения
     parser.add_argument('-o', '--output-image',
-                        type=str,
                         help='Имя сгенерированного файла с изображением графа')
+
+    # Режим Транзитивности
+    parser.add_argument('-tf', '--transitive_off',
+                        action='store_true',
+                        help='Режим вывода зависимостей в без транзитивности')
 
     # Режим ASCII-дерева
     parser.add_argument('-a', '--ascii-tree',
@@ -41,23 +45,26 @@ def command_line():
 
     return args_dict
 
-    #package_name: First_proggram
+    #package_name: name
     #repo_url: \some\url
     #repo_mode: test
     #output_image: None
+    #transitive_off: False
     #ascii_tree: False
 
 args_dict = command_line()
 
 #объект класса
-apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"])
+apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"], args_dict["repo_mode"], args_dict["transitive_off"])
 
 # Вызов метода
-#print(apk_dep.run(args_dict["package_name"]),'\n')
-#
 apk_dep.build_graph()
+
 
 apk_dep.print_graph()
 
-#print("Вывод зиш\n",apk_dep.run("zsh"))
+
+
+
+
 

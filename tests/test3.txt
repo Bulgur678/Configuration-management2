@@ -1,0 +1,35 @@
+Сложный граф с множественными путями
+P:A
+D:B C
+
+P:B
+D:D E
+
+P:C  
+D:D F
+
+P:D
+D:G H
+
+P:E
+D:H
+
+P:F
+D:I
+
+P:G
+D:J
+
+P:H
+D:J K
+
+P:I
+D:K
+
+P:J
+D:L
+
+P:K
+D:L
+
+P:L

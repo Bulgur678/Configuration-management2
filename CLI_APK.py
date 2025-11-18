@@ -2,19 +2,27 @@ import urllib.request
 import io
 import gzip
 from collections import deque
+import copy
 from warnings import deprecated
 
 
 class APK_Dependency:
 
-    def __init__(self, package_name, repo_url: str):
+    def __init__(self, package_name: str, repo_url: str, repo_mode: str, transitive_off: bool):
         self.package_name = package_name
         self.repo_url = repo_url
+        self.repo_mode = repo_mode
         self.apk_text = self.fetch_apkindex_text(repo_url)
+        self.transitive_off = transitive_off
 
 
     def fetch_apkindex_text(self, repo_url: str) -> str:
-
+        #test-mode
+        if self.repo_mode == "test":
+            with open(self.repo_url, "r", errors='ignore') as file:
+                text = file.read()
+                return text
+        #remote-mode
         repo_url = repo_url.rstrip('/')
         candidates = [
             f"{repo_url}/APKINDEX.tar.gz"#Если пользователь уже ввел архитектуру
@@ -60,36 +68,6 @@ class APK_Dependency:
                     if in_block and line.startswith("D:"):
                         return line[2:].strip()
 
-    def find_package_block(self, apkindex_text: str, package_name: str):
-
-        in_block = False
-        block_lines = []
-        for line in apkindex_text.splitlines():
-            if line.startswith('P:'):
-                if line[2:].strip() == package_name:
-                    in_block = True
-                    block_lines = [line]
-                else:
-                    in_block = False
-            else:
-                if in_block:
-                    block_lines.append(line)
-                    if line.strip() == '':
-                        break
-        if not block_lines:
-            #raise RuntimeError(f"Пакет '{package_name}' не найден в APKINDEX")
-            block_lines = "D:NOT_FOUND_" + package_name
-            print("ПРОВЕРКА = ", block_lines)
-        return block_lines
-
-    def extract_dep_line(self, block_lines):
-        dep_line = None
-        for line in block_lines:
-            if line.startswith('D:'):
-                dep_line = line[2:].strip()
-                break
-        return dep_line
-
     def clean_dependencies(self, dep_line: str):
         if not dep_line:
             return []
@@ -104,11 +82,7 @@ class APK_Dependency:
 
     def run(self, package_name):
 
-        #block_lines = self.find_package_block(self.apk_text, package_name)
-        #dep_line = self.extract_dep_line(block_lines)
-
         dep_line = self.find_package_dependence(self.apk_text, package_name)
-        #print("Без обработки = ", dep_line,"\n")
 
         dependencies = self.clean_dependencies(dep_line)
 
@@ -116,7 +90,6 @@ class APK_Dependency:
 
 
     def build_graph(self):
-
         self.graph = {}
         self.visited_bfs = set()
 
@@ -126,16 +99,11 @@ class APK_Dependency:
         # Запускаем рекурсивный BFS
         self.BFS_r(queue)
 
-        # Добавляем транзитивные зависимости потом добавлю
-        # for name, set_dep in self.graph.items():
-        #     print(f"Имя = {name} set_dep = {set_dep}")
-        #     temp_list = list(set_dep)
-        #     for add in temp_list:
-        #         print("ADD = ", add)
-        #         self.add_transitive_edges(add, name)
+        #Копируем граф без транзитивности
+        self.graph_without_transitive = copy.deepcopy(self.graph)
 
-        self.no_transitive_graph = self.graph
-        #ЖПТ
+
+        #Добавляем транзитивность
         for name, set_dep in self.graph.items():
             self.add_transitive_edges_iterative(name)
 
@@ -147,38 +115,23 @@ class APK_Dependency:
             return
         # проход по всему уровню
         for _ in range(len(queue)):  # фиксируем длину на начало
-            #print(queue)
+
             current_package = queue.popleft()
             dependencies = self.run(current_package)
 
             addable = []
             # добавляем сыновей
 
-            #print("Текущий пакет = ", current_package)
-            #print("Зависимости =",dependencies)
             for dep in dependencies:
-                #print("деп",dep)
-                if dep not in self.visited_bfs:
+                if dep not in self.visited_bfs: #
                     queue.append(dep)
                     addable.append(dep)
-            #print("\n")
 
 
             self.graph[current_package] = set(addable)
             self.visited_bfs.add(current_package)
 
         self.BFS_r(queue)
-
-
-    def add_transitive_edges(self, current_package: str, add_to: str):
-        dependencies = self.run(current_package)
-
-
-        for dep in dependencies:
-            if dep != add_to:
-                self.add_transitive_edges(dep,add_to)
-
-        self.graph[add_to].add(current_package)
 
     def add_transitive_edges_iterative(self, start_package: str):
         """Итеративное добавление транзитивных зависимостей через BFS"""
@@ -204,16 +157,29 @@ class APK_Dependency:
 
 
     def print_graph(self):
-        """Визуализация графа"""
-        print("\n--- Граф зависимостей (с транзитивностью) ---")
-        for package, deps in self.graph.items():
-            if deps:
-                print(f"{package} -> {', '.join(sorted(deps))} |END|\n")
+        # Вложенная функция
+        def clean_name(name):
+            """Убирает so: и .so с номером версии из имени пакета"""
+            # Убираем префикс so: если есть
+            if name.startswith('so:'):
+                name = name[3:]
+            # Убираем .so и все что после
+            if '.so' in name:
+                name = name.split('.so')[0]
+            return name
+
+        if self.transitive_off:
+            graph = self.graph_without_transitive
+            print("\n--- Граф зависимостей (Без транзитивности) ---")
+        else:
+            graph = self.graph
+            print("\n--- Граф зависимостей (с транзитивностью) ---")
+
+        for package, deps in graph.items():
+            clean_package = clean_name(package)
+            clean_deps = [clean_name(dep) for dep in sorted(deps)]
+
+            if clean_deps:
+                print(f"{clean_package} -> {', '.join(clean_deps)} \n")
             else:
-                print(f"{package} -> (нет зависимостей)")
-
-
-
-
-
-
+                print(f"{clean_package} -> (нет зависимостей)\n")

@@ -6,11 +6,13 @@ echo python main.py -p nrpe -r https://dl-cdn.alpinelinux.org/alpine/latest-stab
 python main.py -p nrpe -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 echo:
 
+echo ======================================================================================================
 echo Второй тест
-echo python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
-python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
+echo python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/ -tf
+python main.py -p cvs-zsh-completion -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/ -tf
 echo:
 
+echo ======================================================================================================
 echo Третий тест
 echo python python main.py -p nodejs-doc -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/
 python main.py -p nodejs-doc -r https://dl-cdn.alpinelinux.org/alpine/latest-stable/main/

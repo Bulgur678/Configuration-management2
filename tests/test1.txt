@@ -1,0 +1,19 @@
+Простой граф
+P:A
+D:B C
+
+P:B  
+D:D E
+
+P:C
+D:F
+
+P:D
+D:G
+
+P:E
+
+P:F
+D:G
+
+P:G
