@@ -34,6 +34,11 @@ def command_line():
                         action='store_true',
                         help='Режим вывода зависимостей в без транзитивности')
 
+    # Режим Транзитивности
+    parser.add_argument('-R', '--reverse',
+                        action='store_true',
+                        help='Режим вывода обратных зависимостей')
+
     # Режим ASCII-дерева
     parser.add_argument('-a', '--ascii-tree',
                         action='store_true',
@@ -50,12 +55,15 @@ def command_line():
     #repo_mode: test
     #output_image: None
     #transitive_off: False
+    #reverse: False
     #ascii_tree: False
 
 args_dict = command_line()
 
 #объект класса
-apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"], args_dict["repo_mode"], args_dict["transitive_off"])
+apk_dep = APK_Dependency(args_dict["package_name"], args_dict["repo_url"],
+                         args_dict["repo_mode"], args_dict["transitive_off"],
+                         args_dict["reverse"])
 
 # Вызов метода
 apk_dep.build_graph()

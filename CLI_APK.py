@@ -8,20 +8,20 @@ from warnings import deprecated
 
 class APK_Dependency:
 
-    def __init__(self, package_name: str, repo_url: str, repo_mode: str, transitive_off: bool):
+    def __init__(self, package_name: str, repo_url: str, repo_mode: str, transitive_off: bool, reverse: bool):
         self.package_name = package_name
         self.repo_url = repo_url
         self.repo_mode = repo_mode
         self.apk_text = self.fetch_apkindex_text(repo_url)
         self.transitive_off = transitive_off
-
+        self.reverse = reverse
 
     def fetch_apkindex_text(self, repo_url: str) -> str:
         #test-mode
         if self.repo_mode == "test":
             with open(self.repo_url, "r", errors='ignore') as file:
                 text = file.read()
-                return text
+
         #remote-mode
         repo_url = repo_url.rstrip('/')
         candidates = [
@@ -39,10 +39,12 @@ class APK_Dependency:
                     data = resp.read()
                 with gzip.GzipFile(fileobj=io.BytesIO(data)) as gz:
                     text = gz.read().decode('utf-8', errors='ignore')
-                return text
+
             except Exception as e:
                 last_err = e
                 continue
+
+        return text
 
         raise RuntimeError(f"Не удалось загрузить APKINDEX.tar.gz из репозитория. Последняя ошибка: {last_err}")
 
@@ -97,7 +99,10 @@ class APK_Dependency:
         queue = deque([self.package_name])
 
         # Запускаем рекурсивный BFS
-        self.BFS_r(queue)
+        if self.reverse:
+            self._bfs_reverse_recursive(queue)
+        else:
+            self.BFS_r(queue)
 
         #Копируем граф без транзитивности
         self.graph_without_transitive = copy.deepcopy(self.graph)
@@ -121,9 +126,8 @@ class APK_Dependency:
 
             addable = []
             # добавляем сыновей
-
             for dep in dependencies:
-                if dep not in self.visited_bfs: #
+                if dep not in self.visited_bfs:
                     queue.append(dep)
                     addable.append(dep)
 
@@ -134,7 +138,6 @@ class APK_Dependency:
         self.BFS_r(queue)
 
     def add_transitive_edges_iterative(self, start_package: str):
-        """Итеративное добавление транзитивных зависимостей через BFS"""
         visited = set()
         queue = deque(self.graph[start_package])  # начинаем с прямых зависимостей
 
@@ -144,7 +147,16 @@ class APK_Dependency:
                 continue
             visited.add(current)
 
-            try:
+
+            if self.reverse:
+                for set_dep in self.graph[current]:
+                    if set_dep in visited:
+                        continue
+                    if set_dep != start_package:
+                        self.graph[start_package].add(set_dep)
+                        queue.append(set_dep)
+
+            else:
                 # Добавляем зависимости текущего пакета к исходному
                 dependencies = self.run(current)
                 for dep in dependencies:
@@ -152,8 +164,38 @@ class APK_Dependency:
                         self.graph[start_package].add(dep)
                         if dep not in visited:
                             queue.append(dep)
-            except Exception as e:
-                print(f"Ошибка при обработке {current}: {e}")
+
+
+
+    def _bfs_reverse_recursive(self, queue):
+        if not queue:
+            return
+
+        # проход по очереди
+        for _ in range(len(queue)):
+            current_package = queue.popleft()
+            dependencies = set()
+            temp_P = ""
+
+            #Находим строку с зависимостью
+            for line in self.apk_text.splitlines():
+
+                if line.startswith('P:'):
+                    temp_P = line[2:].strip()
+
+                if line.startswith("D:") and current_package in line[2:].strip():
+
+                    dependencies.add(temp_P)
+
+            # Добавляем новые пакеты в очередь с проверкой
+            for dep in dependencies:
+                if dep and dep not in self.visited_bfs and dep not in queue:  # Проверяем dep не пустой
+                    queue.append(dep)
+                    self.visited_bfs.add(dep)
+
+            self.graph[current_package] = dependencies
+
+        self._bfs_reverse_recursive(queue)
 
 
     def print_graph(self):
@@ -168,12 +210,19 @@ class APK_Dependency:
                 name = name.split('.so')[0]
             return name
 
+
+        if self.reverse:
+            print("\n--- Обратный ",end="")
+        else:
+            print("\n--- ",end="")
+
         if self.transitive_off:
             graph = self.graph_without_transitive
-            print("\n--- Граф зависимостей (Без транзитивности) ---")
+            print("Граф зависимостей (Без транзитивности) ---")
         else:
             graph = self.graph
-            print("\n--- Граф зависимостей (с транзитивностью) ---")
+            print("Граф зависимостей (с транзитивностью) ---")
+
 
         for package, deps in graph.items():
             clean_package = clean_name(package)

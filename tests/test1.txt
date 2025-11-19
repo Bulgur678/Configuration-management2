@@ -1,19 +1,12 @@
-Простой граф
 P:A
-D:B C
+D:B
 
-P:B  
-D:D E
+P:B
+D:C
 
 P:C
-D:F
+D:E D
 
 P:D
-D:G
 
 P:E
-
-P:F
-D:G
-
-P:G
